@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Willog · 항공인증 성과보수안 (기밀)</title>
+<style>
+  :root{
+    --bg:#0d1117; --panel:#161b22; --panel2:#1c2230; --line:#2b3340;
+    --txt:#e6edf3; --mut:#8b95a5; --dim:#5c6675;
+    --brand:#3b82f6; --brand2:#60a5fa;
+    --p1:#ef4444; --p2:#f59e0b; --p3:#64748b;
+    --ok:#22c55e; --warn:#eab308; --bad:#ef4444; --hold:#a855f7; --info:#38bdf8;
+    --t1:#22d3ee; --t2:#f472b6;
+    --good:#16341f; --shadow:0 8px 30px rgba(0,0,0,.4);
+    --r:14px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--txt);
+    font-family:"Pretendard","Apple SD Gothic Neo","Malgun Gothic",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    -webkit-font-smoothing:antialiased;line-height:1.5}
+  a{color:var(--brand2)}
+  /* ===== GATE ===== */
+  #gate{position:fixed;inset:0;background:radial-gradient(1200px 600px at 50% -10%,#13233f,#0d1117 60%);
+    display:flex;align-items:center;justify-content:center;z-index:9999}
+  #gate .box{width:min(92vw,400px);background:var(--panel);border:1px solid var(--line);
+    border-radius:18px;padding:34px 30px;box-shadow:var(--shadow);text-align:center}
+  #gate .lock{font-size:34px}
+  #gate h1{font-size:18px;margin:14px 0 4px}
+  #gate p{color:var(--mut);font-size:13px;margin:0 0 20px}
+  #gate input{width:100%;padding:13px 14px;border-radius:10px;border:1px solid var(--line);
+    background:#0d1117;color:var(--txt);font-size:15px;text-align:center;letter-spacing:2px}
+  #gate input:focus{outline:none;border-color:var(--brand)}
+  #gate button{width:100%;margin-top:12px;padding:13px;border:0;border-radius:10px;background:var(--brand);
+    color:#fff;font-size:15px;font-weight:700;cursor:pointer}
+  #gate button:hover{background:#2f6fd6}
+  #gate .err{color:var(--bad);font-size:13px;height:16px;margin-top:10px}
+  #gate .hint{color:var(--dim);font-size:11px;margin-top:18px}
+  #app{display:none}
+  /* ===== LAYOUT ===== */
+  .wrap{max-width:1280px;margin:0 auto;padding:28px 22px 80px}
+  header.top{display:flex;flex-wrap:wrap;align-items:center;gap:14px;justify-content:space-between;margin-bottom:8px}
+  .brand{display:flex;align-items:center;gap:12px}
+  .logo{width:42px;height:42px;border-radius:11px;background:linear-gradient(135deg,#3b82f6,#22d3ee);
+    display:flex;align-items:center;justify-content:center;font-weight:800;font-size:20px;color:#04121f}
+  .brand h1{font-size:19px;margin:0}
+  .brand .sub{color:var(--mut);font-size:12.5px}
+  .chip{font-size:11px;padding:4px 10px;border-radius:999px;border:1px solid var(--line);color:var(--mut)}
+  .confid{border-color:#5a2330;color:#ff8a9b;background:#2a1419}
+  h2.sec{font-size:15px;letter-spacing:.3px;color:var(--brand2);margin:34px 0 14px;
+    padding-bottom:8px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:9px}
+  h2.sec .n{width:24px;height:24px;border-radius:7px;background:var(--panel2);border:1px solid var(--line);
+    display:inline-flex;align-items:center;justify-content:center;font-size:12px;color:var(--brand2)}
+  .lead{color:var(--mut);font-size:13.5px;max-width:880px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:18px}
+  .grid{display:grid;gap:14px}
+  /* ===== TRACK TOGGLE ===== */
+  .trackbar{display:flex;align-items:center;gap:14px;flex-wrap:wrap;background:var(--panel);
+    border:1px solid var(--line);border-radius:var(--r);padding:14px 16px;margin-bottom:6px;position:sticky;top:0;z-index:50;
+    backdrop-filter:blur(6px)}
+  .trackbar .lbl{font-size:13px;color:var(--mut)}
+  .seg{display:inline-flex;background:#0d1117;border:1px solid var(--line);border-radius:11px;padding:4px;gap:4px}
+  .seg button{border:0;background:transparent;color:var(--mut);padding:9px 16px;border-radius:8px;
+    font-size:13.5px;font-weight:700;cursor:pointer;white-space:nowrap}
+  .seg button.on{color:#fff}
+  .seg button[data-t="1"].on{background:linear-gradient(135deg,#1d4ed8,#3b82f6)}
+  .seg button[data-t="2"].on{background:linear-gradient(135deg,#be185d,#f472b6)}
+  /* ===== TRACK CARDS ===== */
+  .tcards{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .tcard{border-radius:var(--r);padding:20px;border:1px solid var(--line);background:var(--panel);position:relative;overflow:hidden}
+  .tcard.t1{border-color:#274690}
+  .tcard.t2{border-color:#7a2a52}
+  .tcard .tag{font-size:11px;font-weight:700;padding:4px 10px;border-radius:999px;display:inline-block}
+  .tcard.t1 .tag{background:#15264f;color:#9dc0ff}
+  .tcard.t2 .tag{background:#3a1530;color:#ffa6d2}
+  .tcard h3{margin:12px 0 4px;font-size:18px}
+  .tcard .desc{color:var(--mut);font-size:13px;min-height:38px}
+  .tcard ul{margin:12px 0 0;padding-left:18px;color:var(--txt);font-size:13px}
+  .tcard li{margin:5px 0}
+  .tcard .big{font-size:13px;color:var(--mut);margin-top:14px;border-top:1px dashed var(--line);padding-top:12px}
+  .tcard .big b{color:var(--txt);font-size:15px}
+  .who{font-size:12px;color:var(--dim);margin-top:8px}
+  /* ===== STAT CARDS ===== */
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+  .stat{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:15px}
+  .stat .k{color:var(--mut);font-size:12px}
+  .stat .v{font-size:23px;font-weight:800;margin-top:4px}
+  .stat .v small{font-size:13px;color:var(--mut);font-weight:600}
+  /* ===== SCHEDULE TABLE ===== */
+  table{border-collapse:collapse;width:100%;font-size:13px}
+  .sched th,.sched td{border:1px solid var(--line);padding:9px 11px;text-align:center}
+  .sched th{background:var(--panel2);color:var(--brand2);font-weight:700}
+  .sched td.l{text-align:left}
+  .sched tr:nth-child(even) td{background:#12161d}
+  .num{font-variant-numeric:tabular-nums}
+  /* ===== FILTERS ===== */
+  .filters{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:14px 0}
+  .filters input[type=text]{background:#0d1117;border:1px solid var(--line);color:var(--txt);
+    padding:9px 12px;border-radius:9px;font-size:13px;min-width:180px}
+  .pill{font-size:12.5px;padding:7px 13px;border-radius:999px;border:1px solid var(--line);
+    background:var(--panel);color:var(--mut);cursor:pointer;user-select:none}
+  .pill.on{background:var(--brand);border-color:var(--brand);color:#fff}
+  .pillgrp{display:inline-flex;gap:6px;flex-wrap:wrap}
+  .grpsep{width:1px;height:22px;background:var(--line);margin:0 4px}
+  /* ===== MAIN TABLE ===== */
+  .tblwrap{overflow-x:auto;border:1px solid var(--line);border-radius:var(--r)}
+  table.main{font-size:12.8px;min-width:1080px}
+  table.main th,table.main td{padding:9px 10px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
+  table.main th{position:sticky;top:0;background:var(--panel2);color:var(--brand2);font-weight:700;
+    cursor:pointer;z-index:2;font-size:12px}
+  table.main th:hover{color:#fff}
+  table.main tbody tr:hover td{background:#12161d}
+  table.main td.name{white-space:normal;min-width:160px;font-weight:600}
+  .iata{color:var(--dim);font-weight:600;font-size:11px;margin-left:5px}
+  .prio{font-weight:800;font-size:11px;padding:2px 8px;border-radius:6px}
+  .prio.p1{background:#3a1517;color:#ff9a9a}
+  .prio.p2{background:#3a2c12;color:#ffce80}
+  .prio.p3{background:#222a35;color:#9fb0c4}
+  .ne{font-size:11px;padding:2px 7px;border-radius:6px;border:1px solid var(--line);color:var(--mut)}
+  .ne.new{color:#ffd27a;border-color:#5a4413}
+  .dev{display:inline-flex;gap:4px}
+  .d{width:30px;text-align:center;font-size:10.5px;font-weight:800;padding:3px 0;border-radius:5px;border:1px solid var(--line)}
+  .d.done{background:#0e2a17;color:#5fe08a;border-color:#1c4a2c}
+  .d.open{background:#0d1117;color:#7da2cf;border-color:#28415f}
+  .d.na{color:var(--dim);opacity:.4}
+  .feas{font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px;white-space:nowrap}
+  .f-high{background:#0e2a17;color:#63e08a}
+  .f-mid{background:#10283a;color:#5fc4f0}
+  .f-prog{background:#2a2410;color:#e3c54e}
+  .f-none{background:#1c2230;color:#9aa6b6}
+  .f-hold{background:#241433;color:#cf9bf0}
+  .f-bad{background:#2a1316;color:#ff8a8a}
+  .f-done{background:#15311f;color:#7be0a0}
+  .stars{color:#f0b73e;letter-spacing:1px;font-size:12px}
+  .pay{font-weight:800;color:#fff;font-variant-numeric:tabular-nums}
+  .pay small{color:var(--mut);font-weight:600;font-size:11px}
+  .ev{font-variant-numeric:tabular-nums;color:var(--brand2);font-weight:700}
+  .memo{color:var(--dim);font-size:11px;white-space:normal;max-width:230px}
+  details.note{margin-top:10px}
+  details.note summary{cursor:pointer;color:var(--brand2);font-size:13px}
+  .foot{color:var(--dim);font-size:12px;margin-top:10px;line-height:1.7}
+  .kbd{background:#0d1117;border:1px solid var(--line);border-radius:5px;padding:1px 6px;font-size:11px;color:var(--mut)}
+  .calc{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px;align-items:end}
+  .calc label{font-size:12px;color:var(--mut);display:block;margin-bottom:6px}
+  .calc input{width:100%;background:#0d1117;border:1px solid var(--line);color:var(--txt);padding:9px 11px;border-radius:9px;font-size:14px}
+  .res{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px}
+  .resbox{border:1px solid var(--line);border-radius:12px;padding:16px}
+  .resbox.t1{border-color:#274690;background:#0f1a30}
+  .resbox.t2{border-color:#7a2a52;background:#250f1d}
+  .resbox .rk{font-size:12px;color:var(--mut)}
+  .resbox .rv{font-size:26px;font-weight:800;margin-top:4px;font-variant-numeric:tabular-nums}
+  .verdict{margin-top:14px;padding:13px 15px;border-radius:11px;border:1px dashed var(--line);font-size:13.5px;background:var(--panel2)}
+  .verdict b{color:#fff}
+  .toggle-usd{font-size:12px;color:var(--mut);cursor:pointer;user-select:none}
+  @media(max-width:760px){.tcards,.res{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<!-- ===================== PASSWORD GATE ===================== -->
+<div id="gate">
+  <div class="box">
+    <div class="lock">🔒</div>
+    <h1>Willog · 항공인증 성과보수안</h1>
+    <p>내부 기밀 문서입니다. 접근 비밀번호를 입력하세요.</p>
+    <input id="pw" type="password" placeholder="••••••••" autocomplete="off" autofocus>
+    <button id="enter">열기</button>
+    <div class="err" id="err"></div>
+    <div class="hint">문의: 구매팀 · 본 문서는 채용 후보자/내부 검토용입니다.</div>
+  </div>
+</div>
+
+<!-- ===================== APP ===================== -->
+<div id="app">
+<div class="wrap">
+
+  <header class="top">
+    <div class="brand">
+      <div class="logo">W</div>
+      <div>
+        <h1>항공인증 성과보수 설계안 <span style="color:var(--mut);font-weight:500;font-size:14px">v4.1</span></h1>
+        <div class="sub">Willog 디바이스(T1·V2·S2) 항공사 인증 프로젝트 · 프리랜서 보상 트랙 선택 가이드</div>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <span class="chip confid">CONFIDENTIAL</span>
+      <span class="chip" id="datechip">기준 2026-06</span>
+    </div>
+  </header>
+
+  <p class="lead">
+    이 문서는 <b>항공사별 × 디바이스별</b> 인증 난이도·우선순위·실현가능성을 한 장에 정리하고, 그에 따른
+    <b>성과보수(건당 보수 × 인증 건수)</b>를 <b>2개 보상 트랙</b> 기준으로 자동 계산합니다.
+    상단의 <b>트랙 선택</b> 버튼을 누르면 아래 모든 보수 금액이 해당 트랙 기준으로 즉시 바뀝니다.
+    지원자는 본인의 <b>리스크 감내 성향</b>과 <b>예상 인증 성공 건수</b>를 기준으로 트랙을 선택하면 됩니다.
+  </p>
+
+  <!-- TRACK SELECT BAR -->
+  <div class="trackbar">
+    <span class="lbl">💡 보상 트랙 보기 :</span>
+    <div class="seg" id="seg">
+      <button data-t="1" class="on">트랙 1 · 안정형 (기본급 + 소액 성과)</button>
+      <button data-t="2">트랙 2 · 도전형 (무기본급 + 큰 성과)</button>
+    </div>
+    <span class="toggle-usd" id="cur">통화: ₩ KRW (클릭 시 $ USD)</span>
+  </div>
+
+  <!-- ===== 1. 두 트랙 비교 ===== -->
+  <h2 class="sec"><span class="n">1</span>두 가지 보상 트랙 — 무엇이 다른가</h2>
+  <div class="tcards">
+    <div class="tcard t1">
+      <span class="tag">TRACK 1 · 안정형</span>
+      <h3>기본급 + 소액 성과보수</h3>
+      <div class="desc">매월 고정 기본급으로 생활 안정성을 확보하고, 인증 성공 시 표준 성과보수의 <b>50%</b>를 추가로 받습니다.</div>
+      <ul>
+        <li>월 기본급 <b id="t1base">₩2,500,000</b> (제안·협의 가능)</li>
+        <li>건당 성과보수 = 표준 보수 <b>× 0.5</b></li>
+        <li>리스크 ↓ · 상한(upside) ↓</li>
+      </ul>
+      <div class="big">전 항공사 완주 시 예상 총수령 (3개월 가정)<br><b id="t1total">—</b></div>
+      <div class="who">👤 적합: 안정적 현금흐름이 필요하고, 초기 성과 불확실성이 부담스러운 지원자</div>
+    </div>
+    <div class="tcard t2">
+      <span class="tag">TRACK 2 · 도전형</span>
+      <h3>기본급 없음 + 큰 성과보수</h3>
+      <div class="desc">고정급이 없는 대신 인증 성공 시 표준 성과보수의 <b>150%</b>를 받습니다. 많이·빨리 딸수록 트랙1을 크게 앞섭니다.</div>
+      <ul>
+        <li>월 기본급 <b>없음</b></li>
+        <li>건당 성과보수 = 표준 보수 <b>× 1.5</b></li>
+        <li>리스크 ↑ · 상한(upside) ↑↑</li>
+      </ul>
+      <div class="big">전 항공사 완주 시 예상 총수령 (3개월 가정)<br><b id="t2total">—</b></div>
+      <div class="who">👤 적합: 실행력·영업력에 자신 있고, 단기 고수익을 노리는 지원자</div>
+    </div>
+  </div>
+
+  <!-- ===== 2. 표준 성과보수 스케줄 ===== -->
+  <h2 class="sec"><span class="n">2</span>표준 성과보수 스케줄 (지급 구조)</h2>
+  <p class="lead">보수는 <b>① 우선순위(1·2·3)</b> × <b>② 신규/기존 항공사</b>에 따라 <b>인증 1건당</b> 차등 지급되며,
+  <b>③ 조기 인증</b>(2개월 내 서면 증빙 서류 구비 완료) 시 보너스가 가산됩니다. 아래는 <b>표준(100%)</b> 기준이며,
+  실제 지급액은 선택한 트랙 배수가 적용됩니다.</p>
+  <div class="card" style="overflow-x:auto">
+    <table class="sched" id="schedTbl">
+      <thead>
+        <tr><th rowspan="2">우선순위</th><th rowspan="2">정의</th><th colspan="2">기본 성과보수 (1건당)</th><th rowspan="2">조기 인증 보너스<br>(+, 기본의 50%)</th></tr>
+        <tr><th>기존 항공사</th><th>신규 항공사</th></tr>
+      </thead>
+      <tbody><!-- filled by JS --></tbody>
+    </table>
+    <div class="foot">
+      · <b>우선순위</b> — 1순위: 고객사 요청 항공사 + 윌로그 지사 소재국 항공사 / 2순위: 유럽 소재 항공사 / 3순위: 그 외 지역<br>
+      · <b>신규·기존</b> — 기존: 과거 컨택(소통) 이력 있는 항공사 / 신규: 처음 컨택하는 항공사 (난이도 ↑)<br>
+      · <b>조기 인증</b> — 2개월 내 ‘서면 증빙 서류 구비’ 완료 시, 해당 건 기본 보수의 50%를 보너스로 가산<br>
+      · <b>지급 트리거</b> — 항공사의 정식 <b>Approved + 서면 증빙 서류 구비</b> 완료 시점에 건별 지급
+    </div>
+  </div>
+
+  <!-- ===== 3. 현황 요약 ===== -->
+  <h2 class="sec"><span class="n">3</span>전체 현황 요약 (선택 트랙 기준)</h2>
+  <div class="stats" id="stats"></div>
+
+  <!-- ===== 4. 항공사 × 디바이스 마스터 ===== -->
+  <h2 class="sec"><span class="n">4</span>항공사 × 디바이스별 성과보수표</h2>
+  <p class="lead">디바이스 칩: <span class="d done" style="display:inline-block">T1</span> 인증 완료 ·
+  <span class="d open" style="display:inline-block">T1</span> 미인증(획득 가능). <b>건당 보수</b>는 해당 항공사의 우선순위·신규/기존·선택 트랙 기준 1건 금액,
+  <b>최대 보수</b>는 ‘획득 가능한 모든 디바이스 건 + 조기 보너스’ 합계입니다. <b>기대값</b>은 실현가능성(성공확률) 가중치를 곱한 참고 지표입니다.</p>
+
+  <div class="filters" id="filters">
+    <input type="text" id="search" placeholder="🔍 항공사·IATA·지역 검색">
+    <span class="grpsep"></span>
+    <div class="pillgrp" data-grp="prio">
+      <span class="pill on" data-v="all">전체순위</span>
+      <span class="pill" data-v="1순위">1순위</span>
+      <span class="pill" data-v="2순위">2순위</span>
+      <span class="pill" data-v="3순위">3순위</span>
+    </div>
+    <span class="grpsep"></span>
+    <div class="pillgrp" data-grp="feas">
+      <span class="pill on" data-v="all">전체상태</span>
+      <span class="pill" data-v="earn">획득가능만</span>
+      <span class="pill" data-v="high">실현높음</span>
+      <span class="pill" data-v="done">완료</span>
+      <span class="pill" data-v="bad">불가/보류</span>
+    </div>
+    <span class="grpsep"></span>
+    <div class="pillgrp" data-grp="dev">
+      <span class="pill on" data-v="all">전체디바이스</span>
+      <span class="pill" data-v="T1">T1 필요</span>
+      <span class="pill" data-v="V2">V2 필요</span>
+      <span class="pill" data-v="S2">S2 필요</span>
+    </div>
+  </div>
+
+  <div class="tblwrap">
+    <table class="main" id="mainTbl">
+      <thead><tr>
+        <th data-s="rank">추천<br>순위</th>
+        <th data-s="name">항공사</th>
+        <th data-s="region">지역</th>
+        <th data-s="prio">우선<br>순위</th>
+        <th data-s="ne">신규/<br>기존</th>
+        <th>디바이스 (T1·V2·S2)</th>
+        <th data-s="feas">실현<br>가능성</th>
+        <th data-s="diff">난이도</th>
+        <th data-s="units">획득<br>가능건</th>
+        <th data-s="per">건당<br>보수</th>
+        <th data-s="max">최대 보수<br>(조기 포함)</th>
+        <th data-s="ev">기대값<br>(참고)</th>
+        <th>진척/특이사항</th>
+      </tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+  <div class="foot" id="tblfoot"></div>
+
+  <!-- ===== 5. 트랙 손익분기 계산기 ===== -->
+  <h2 class="sec"><span class="n">5</span>트랙 선택 손익분기 계산기</h2>
+  <p class="lead">예상 <b>인증 성공 건수</b>와 활동 기간을 넣으면 두 트랙의 총수령액을 비교해 드립니다.
+  가정값(기본급·배수)은 협의에 따라 바꿔 입력할 수 있습니다.</p>
+  <div class="card">
+    <div class="calc">
+      <div><label>예상 인증 성공 건수 (총 건)</label><input type="number" id="cCerts" value="30"></div>
+      <div><label>평균 1건당 표준보수 (₩)</label><input type="number" id="cAvg" value="60000"></div>
+      <div><label>조기 인증 비율 (%)</label><input type="number" id="cEarly" value="40"></div>
+      <div><label>활동 기간 (개월)</label><input type="number" id="cMonths" value="3"></div>
+      <div><label>트랙1 월 기본급 (₩)</label><input type="number" id="cBase" value="2500000"></div>
+      <div><label>트랙1 성과 배수</label><input type="number" id="cM1" value="0.5" step="0.1"></div>
+      <div><label>트랙2 성과 배수</label><input type="number" id="cM2" value="1.5" step="0.1"></div>
+    </div>
+    <div class="res">
+      <div class="resbox t1"><div class="rk">트랙 1 · 안정형 총수령</div><div class="rv" id="rT1">—</div><div class="rk" id="rT1d"></div></div>
+      <div class="resbox t2"><div class="rk">트랙 2 · 도전형 총수령</div><div class="rv" id="rT2">—</div><div class="rk" id="rT2d"></div></div>
+    </div>
+    <div class="verdict" id="verdict"></div>
+    <div class="foot" id="beFoot"></div>
+  </div>
+
+  <!-- ===== 6. 컨설턴트 권고 ===== -->
+  <h2 class="sec"><span class="n">6</span>구매팀장 &amp; 전략 컨설턴트 권고</h2>
+  <div class="grid" style="grid-template-columns:1fr">
+    <div class="card">
+      <ol style="margin:0;padding-left:20px;font-size:13.5px;line-height:1.85">
+        <li><b>우선순위 공략 순서</b> — ‘실현높음(기술검증·신청완료)’ × ‘1순위’ 항공사부터. 이미 파이프라인 후반부라 단기 성공보수 회수가 가장 빠릅니다. 표 기본 정렬(기대값 순)이 곧 공략 순서입니다.</li>
+        <li><b>‘완료’ 항공사의 S2 추가 인증</b> — T1·V2가 이미 끝난 19개사는 채널·담당자가 확보돼 있어 S2 인증 난이도가 낮습니다. 빠른 추가 성과보수 확보처입니다.</li>
+        <li><b>‘불가/보류’는 시간 투입 금지</b> — 거절(Vietnam·Jeju·UPS), 화주사 전용(Nippon·Cargolux), 업무중단(Ethiopian·China Airlines), 노선중단(Aeroflot)은 보수 0 처리. 영업 리소스를 낭비하지 않도록 사전 차단했습니다.</li>
+        <li><b>트랙 선택 가이드</b> — 본인이 <b>3개월 내 25건 이상</b> 인증을 자신하면 트랙2가 유리합니다(손익분기 계산기 참조). 그 이하/불확실하면 트랙1의 기본급이 안전판입니다.</li>
+        <li><b>지급 트리거 명확화</b> — 분쟁 방지를 위해 ‘서면 Approved 증빙 확보’를 유일한 지급 기준으로 계약서에 명시할 것을 권고합니다.</li>
+      </ol>
+    </div>
+  </div>
+
+  <div class="foot" style="margin-top:26px;border-top:1px solid var(--line);padding-top:16px">
+    <b>데이터 출처</b> · ‘2.항공인증 업무 현황_Closer’ 엑셀 (항공사 리스트 최신본 + 성공 보수 지급안 v4).
+    <b>가정</b> · 표준 보수 = KRW 스케줄(1순위 기존75k/신규125k, 2순위 57k/94k, 3순위 43k/71k), 조기보너스=기본의 50%, 환율 1,550원/$.
+    트랙1 기본급·배수는 제안값이며 협의로 조정 가능. 기대값의 성공확률은 진척단계 기반 휴리스틱(참고용).
+    <br><b>보안</b> · 비밀번호 변경은 파일 내 <span class="kbd">PW_HASH</span> 값을 새 SHA-256 해시로 교체하면 됩니다.
+  </div>
+
+</div>
+</div>
+
+<script>
+// ===================== PASSWORD GATE =====================
+const PW_HASH = "0a97e059715e2bbd4dd35808c409a5e795b3e59d619b3ff116f39ed9d74c8e3b"; // sha256("willog2026")
+async function sha256(s){const b=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(s));
+  return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,"0")).join("");}
+async function tryEnter(){
+  const v=document.getElementById("pw").value;
+  if(!v){return;}
+  const h=await sha256(v);
+  if(h===PW_HASH){
+    document.getElementById("gate").style.display="none";
+    document.getElementById("app").style.display="block";
+    if(!window.__init){window.__init=true; boot();}
+  }else{
+    document.getElementById("err").textContent="비밀번호가 올바르지 않습니다.";
+    document.getElementById("pw").value="";
+  }
+}
+document.getElementById("enter").addEventListener("click",tryEnter);
+document.getElementById("pw").addEventListener("keydown",e=>{if(e.key==="Enter")tryEnter();});
+
+// ===================== DATA =====================
+const AIRLINES = [{"name":"Air Incheon","iata":"KJ","region":"아시아","prio":"1순위","status":"인증 완료","memo":"","req":"","note":"","s2done":false,"v2done":true,"t1done":true,"ne":""},{"name":"Air Premia","iata":"YP","region":"아시아","prio":"1순위","status":"인증 완료","memo":"","req":"","note":"","s2done":false,"v2done":true,"t1done":true,"ne":""},{"name":"ANA Airlines","iata":"NH","region":"아시아","prio":"1순위","status":"인증 완료","memo":"","req":"","note":"ANA Wings(EH)","s2done":false,"v2done":true,"t1done":true,"ne":""},{"name":"Asiana Airlines","iata":"OZ","region":"아시아","prio":"1순위","status":"인증 완료","memo":"","req":"","note":"","s2done":false,"v2done":true,"t1done":true,"ne":""},{"name":"Edelweiss Air","iata":"WK","region":"유럽","prio":"2순위","status":"인증 완료","memo":"","req":"","note":"","s2done":false,"v2done":true,"t1done":true,"ne":""},{"name":"Korean Airline","iata":"KE","region":"아시아","prio":"1순위","status":"인증 완료","memo":"","req":"","note":"","s2done":false,"v2done":true,"t1done":true,"ne":""},{"name":"Swiss world cargo","iata":"LX","region":"유럽","prio":"2순위","status":"인증 완료","memo":"","req":"","note":"","s2done":false,"v2done":true,"t1done":true,"ne":""},{"name":"T-way","iata":"TW","region":"아시아","prio":"1순위","status":"인증 완료","memo":"","req":"","note":"","s2done":false,"v2done":true,"t1done":true,"ne":""},{"name":"Air New Zealand","iata":"NZ","region":"오세아니아","prio":"3순위","status":"인증 완료","memo":"","req":"","note":"","s2done":false,"v2done":true,"t1done":true,"ne":""},{"name":"WestJet Cargo","iata":"WS","region":"북아메리카","prio":"1순위","status":"인증 완료","memo":"","req":"","note":"","s2done":false,"v2done":true,"t1done":true,"ne":""},{"name":"Air Canada","iata":"AC","region":"북아메리카","prio":"1순위","status":"인증 완료","memo":"","req":"","note":"","s2done":false,"v2done":true,"t1done":true,"ne":""},{"name":"Cathay Pacific","iata":"CX","region":"홍콩","prio":"3순위","status":"인증 완료","memo":"","req":"","note":"","s2done":false,"v2done":true,"t1done":true,"ne":""},{"name":"Qatar Airways","iata":"QR","region":"카타르","prio":"3순위","status":"인증 완료","memo":"","req":"","note":"","s2done":false,"v2done":true,"t1done":true,"ne":""},{"name":"Silk Way West Airline","iata":"7L","region":"아제르바이잔","prio":"3순위","status":"인증 완료","memo":"","req":"","note":"","s2done":false,"v2done":true,"t1done":true,"ne":""},{"name":"Lufthansa Airlines","iata":"LH","region":"유럽","prio":"2순위","status":"인증 완료","memo":"","req":"","note":"","s2done":false,"v2done":true,"t1done":true,"ne":""},{"name":"LATAM Airlines","iata":"LA","region":"남아메리카","prio":"3순위","status":"인증 완료","memo":"","req":"","note":"","s2done":false,"v2done":true,"t1done":true,"ne":""},{"name":"SriLankan Airlines","iata":"UL","region":"스리랑카","prio":"3순위","status":"인증 완료","memo":"","req":"","note":"","s2done":false,"v2done":true,"t1done":true,"ne":""},{"name":"Cebu Pacific Air","iata":"5J","region":"필리핀","prio":"3순위","status":"인증 완료","memo":"","req":"","note":"","s2done":false,"v2done":true,"t1done":true,"ne":""},{"name":"Parata Air","iata":"WE","region":"아시아","prio":"1순위","status":"인증 완료","memo":"","req":"","note":"","s2done":false,"v2done":true,"t1done":true,"ne":""},{"name":"Aeromexico","iata":"AM","region":"멕시코","prio":"3순위","status":"","memo":"","req":"","note":"","s2done":false,"v2done":false,"t1done":false,"ne":"기존"},{"name":"Air Atlanta","iata":"CC","region":"유럽","prio":"2순위","status":"","memo":"","req":"","note":"","s2done":false,"v2done":false,"t1done":false,"ne":"기존"},{"name":"Air China","iata":"CA","region":"중국","prio":"3순위","status":"기술 검증 대응","memo":"V2, T1 기술 검증 중(항공 모드)","req":"","note":"","s2done":false,"v2done":false,"t1done":false,"ne":""},{"name":"Air Europa Cargo","iata":"UX","region":"유럽","prio":"2순위","status":"기술 검증 대응","memo":"V2, T1 기술 검증 중(Ref No. UX_056 – RT+T1L, UX_057 – OTQ+V2)","req":"","note":"","s2done":false,"v2done":false,"t1done":false,"ne":""},{"name":"Air France","iata":"AF","region":"유럽","prio":"2순위","status":"팬딩","memo":"T1 Pending","req":"사업성 검토","note":"사업성 검증 후 인증 신청 가능","s2done":false,"v2done":true,"t1done":false,"ne":""},{"name":"Air India","iata":"AI","region":"인도","prio":"3순위","status":"","memo":"","req":"","note":"","s2done":false,"v2done":false,"t1done":false,"ne":""},{"name":"Air Niugini Limited","iata":"PX","region":"오세아니아","prio":"3순위","status":"","memo":"","req":"","note":"","s2done":false,"v2done":false,"t1done":false,"ne":"기존"},{"name":"Airasia Airlines","iata":"AK","region":"말레이시아","prio":"3순위","status":"","memo":"","req":"","note":"","s2done":false,"v2done":false,"t1done":false,"ne":"기존"},{"name":"Alaska Airlines","iata":"AS","region":"북아메리카","prio":"1순위","status":"신청 서류 제출(완료)","memo":"V2, T1 On going(신청 완료)","req":"","note":"","s2done":false,"v2done":false,"t1done":false,"ne":""},{"name":"American Airlines","iata":"AA","region":"북아메리카","prio":"1순위","status":"신청 서류 제출(완료)","memo":"V2, T1 On going(신청 완료)","req":"","note":"","s2done":false,"v2done":false,"t1done":false,"ne":""},{"name":"ASL Airlines (Be)","iata":"3V","region":"유럽","prio":"2순위","status":"","memo":"","req":"","note":"","s2done":false,"v2done":false,"t1done":false,"ne":"기존"},{"name":"Atlas Air","iata":"5Y","region":"북아메리카","prio":"1순위","status":"","memo":"","req":"","note":"","s2done":false,"v2done":false,"t1done":false,"ne":"신규"},{"name":"Avianca Airlines","iata":"AV","region":"남아메리카","prio":"3순위","status":"","memo":"","req":"","note":"","s2done":false,"v2done":false,"t1done":false,"ne":"기존"},{"name":"Brussels Airline","iata":"SN","region":"유럽","prio":"2순위","status":"","memo":"","req":"","note":"","s2done":false,"v2done":false,"t1done":false,"ne":"신규"},{"name":"Caribbean Airlines","iata":"BW","region":"남아메리카","prio":"3순위","status":"","memo":"","req":"","note":"","s2done":false,"v2done":false,"t1done":false,"ne":"기존"},{"name":"Challenge Airlines (BE)","iata":"X7","region":"유럽","prio":"2순위","status":"","memo":"","req":"","note":"","s2done":false,"v2done":false,"t1done":false,"ne":"신규"},{"name":"Challenge Airlines (IL)","iata":"5C","region":"이스라엘","prio":"3순위","status":"","memo":"","req":"","note":"","s2done":false,"v2done":false,"t1done":false,"ne":"신규"},{"name":"Copa Airlines","iata":"CM","region":"남아메리카","prio":"3순위","status":"","memo":"","req":"","note":"","s2done":false,"v2done":false,"t1done":false,"ne":"신규"},{"name":"Condor","iata":"DE","region":"유럽","prio":"2순위","status":"","memo":"","req":"","note":"","s2done":false,"v2done":false,"t1done":false,"ne":"기존"},{"name":"Delta Airline","iata":"DL","region":"북아메리카","prio":"1순위","status":"","memo":"","req":"","note":"","s2done":false,"v2done":false,"t1done":false,"ne":""},{"name":"Emirates Sky Cargo","iata":"EK","region":"UAE","prio":"3순위","status":"","memo":"","req":"","note":"","s2done":false,"v2done":false,"t1done":false,"ne":"신규"},{"name":"Egypt Air","iata":"MS","region":"이집트","prio":"3순위","status":"","memo":"","req":"","note":"","s2done":false,"v2done":false,"t1done":false,"ne":"신규"},{"name":"EL AL airline","iata":"LY","region":"이스라엘","prio":"3순위","status":"신청 서류 작성 및 서류 구비","memo":"검토 결과 대기 중 (via. ABDA Korea)","req":"","note":"","s2done":false,"v2done":false,"t1done":false,"ne":""},{"name":"Etihad Airways","iata":"EY","region":"UAE","prio":"3순위","status":"기술 검증 대응","memo":"V2, T1 기술 검증 중","req":"Operational description and technical specifications of the device and peripherals","note":"","s2done":false,"v2done":false,"t1done":false,"ne":""},{"name":"Eva Air","iata":"BR","region":"대만","prio":"3순위","status":"","memo":"","req":"","note":"","s2done":false,"v2done":false,"t1done":false,"ne":"기존"},{"name":"FinnAir Caro","iata":"AY","region":"유럽","prio":"2순위","status":"신청 서류 제출(완료)","memo":"V2, T1 On going(신청 완료)","req":"","note":"","s2done":false,"v2done":false,"t1done":false,"ne":""},{"name":"Horizon Air Flights","iata":"QX","region":"북아메리카","prio":"1순위","status":"","memo":"","req":"","note":"","s2done":false,"v2done":false,"t1done":false,"ne":"기존"},{"name":"IAG Group","iata":"BA/IB/EI/VY/LL/CJ/I2","region":"유럽","prio":"2순위","status":"신청 서류 제출(완료)","memo":"V2, T1 On going (신청 완료, via System)","req":"","note":"British Airline(BA), Iberia(IB), Aer Lingus Cargo(EI), Vueling Airlines(VY), Level Airlines(LL), BA CityFlyer(CJ), Iberia Express(I2)","s2done":false,"v2done":false,"t1done":false,"ne":"기존"},{"name":"Iceland Air","iata":"FI","region":"유럽","prio":"2순위","status":"","memo":"","req":"","note":"","s2done":false,"v2done":false,"t1done":false,"ne":"기존"},{"name":"IndiGo Air","iata":"6E","region":"인도","prio":"3순위","status":"","memo":"","req":"","note":"","s2done":false,"v2done":false,"t1done":false,"ne":"신규"},{"name":"ITA Airways","iata":"AZ","region":"유럽","prio":"2순위","status":"","memo":"","req":"","note":"","s2done":false,"v2done":false,"t1done":false,"ne":"기존"},{"name":"JAL Airline","iata":"JL","region":"아시아","prio":"1순위","status":"신청 서류 제출(완료)","memo":"V2, T1 On going(신청 완료)","req":"","note":"","s2done":false,"v2done":false,"t1done":false,"ne":""},{"name":"Kenya Airways","iata":"KQ","region":"아프리카","prio":"3순위","status":"","memo":"","req":"","note":"","s2done":false,"v2done":false,"t1done":false,"ne":"신규"},{"name":"KLM","iata":"KL","region":"유럽","prio":"2순위","status":"팬딩","memo":"V2, T1 Pending","req":"사업성 검토","note":"","s2done":false,"v2done":false,"t1done":false,"ne":""},{"name":"LOT Polish Airlines","iata":"LO","region":"유럽","prio":"2순위","status":"","memo":"","req":"","note":"","s2done":false,"v2done":false,"t1done":false,"ne":""},{"name":"Malaysia Airlines","iata":"MH","region":"말레이시아","prio":"3순위","status":"신청 서류 작성 및 서류 구비","memo":"V2, T1 인증 신청 중","req":"","note":"","s2done":false,"v2done":false,"t1done":false,"ne":"기존"},{"name":"Martinair Cargo","iata":"MP","region":"유럽","prio":"2순위","status":"팬딩","memo":"V2, T1 Pending","req":"사업성 검토","note":"","s2done":false,"v2done":false,"t1done":false,"ne":""},{"name":"MNG Airlines","iata":"MB","region":"유럽","prio":"2순위","status":"","memo":"","req":"","note":"","s2done":false,"v2done":false,"t1done":false,"ne":"기존"},{"name":"Norse Atlantic Airlines","iata":"N0","region":"유럽","prio":"2순위","status":"","memo":"","req":"","note":"","s2done":false,"v2done":false,"t1done":false,"ne":"기존"},{"name":"Oman Air","iata":"WY","region":"오만","prio":"3순위","status":"신청 서류 작성 및 서류 구비","memo":"V2, T1 인증 신청 중","req":"","note":"","s2done":false,"v2done":false,"t1done":false,"ne":""},{"name":"Polar Air Cargo","iata":"PO","region":"북아메리카","prio":"1순위","status":"","memo":"","req":"","note":"","s2done":false,"v2done":false,"t1done":false,"ne":"신규"},{"name":"Qantas Freight","iata":"QF","region":"오세아니아","prio":"3순위","status":"","memo":"","req":"","note":"","s2done":false,"v2done":false,"t1done":false,"ne":"신규"},{"name":"Saudia Arabian Cargo","iata":"SV","region":"사우디","prio":"3순위","status":"","memo":"","req":"","note":"","s2done":false,"v2done":false,"t1done":false,"ne":"기존"},{"name":"Singapore Airlines Cargo","iata":"SQ","region":"아시아","prio":"1순위","status":"","memo":"","req":"","note":"","s2done":false,"v2done":true,"t1done":false,"ne":"기존"},{"name":"Skywest Airlines","iata":"OO","region":"북아메리카","prio":"1순위","status":"","memo":"","req":"","note":"","s2done":false,"v2done":false,"t1done":false,"ne":"신규"},{"name":"SmartLynx Airlines","iata":"2N","region":"유럽","prio":"2순위","status":"","memo":"","req":"","note":"","s2done":false,"v2done":false,"t1done":false,"ne":"신규"},{"name":"South African Airways","iata":"SA","region":"아프리카","prio":"3순위","status":"","memo":"","req":"","note":"","s2done":false,"v2done":false,"t1done":false,"ne":"기존"},{"name":"Southwest Airlines","iata":"WN","region":"북아메리카","prio":"1순위","status":"신청 서류 작성 및 서류 구비","memo":"V2, T1 인증 신청 중","req":"","note":"","s2done":false,"v2done":false,"t1done":false,"ne":""},{"name":"STARLUX Airlines","iata":"JX","region":"대만","prio":"3순위","status":"신청 서류 작성 및 서류 구비","memo":"V2, T1 인증 신청 중","req":"","note":"","s2done":false,"v2done":false,"t1done":false,"ne":""},{"name":"TAP Air Cargo","iata":"TP","region":"유럽","prio":"2순위","status":"기술 검증 대응","memo":"V2, T1 기술 검증 중","req":"","note":"","s2done":false,"v2done":false,"t1done":false,"ne":""},{"name":"Thai Airline","iata":"TG","region":"태국","prio":"3순위","status":"","memo":"","req":"","note":"","s2done":false,"v2done":false,"t1done":false,"ne":"기존"},{"name":"Turkish Airlines","iata":"TK","region":"유럽","prio":"2순위","status":"신청 서류 작성 및 서류 구비","memo":"V2, T1 인증 신청 중","req":"","note":"","s2done":false,"v2done":false,"t1done":false,"ne":""},{"name":"United Airlines","iata":"UA","region":"북아메리카","prio":"1순위","status":"","memo":"","req":"","note":"","s2done":false,"v2done":false,"t1done":false,"ne":"기존"},{"name":"Vietjet Air","iata":"VJ","region":"베트남","prio":"3순위","status":"","memo":"","req":"","note":"","s2done":false,"v2done":false,"t1done":false,"ne":"기존"},{"name":"Virgin Atlantic Cargo","iata":"VS","region":"유럽","prio":"2순위","status":"기술 검증 대응","memo":"V2, T1 기술 검증 중","req":"","note":"","s2done":false,"v2done":false,"t1done":false,"ne":""},{"name":"Virgin Australia","iata":"VA","region":"오세아니아","prio":"3순위","status":"","memo":"","req":"","note":"","s2done":false,"v2done":false,"t1done":false,"ne":"기존"},{"name":"Volga-Dnepr Airlines","iata":"VI","region":"러시아","prio":"3순위","status":"","memo":"","req":"","note":"","s2done":false,"v2done":false,"t1done":false,"ne":"신규"},{"name":"Nippon Cargo Airlines","iata":"KZ","region":"아시아","prio":"1순위","status":"팬딩","memo":"V2, T1 Pending","req":"","note":"화주사만 인증 신청 가능","s2done":false,"v2done":false,"t1done":false,"ne":""},{"name":"Cargolux","iata":"CV","region":"유럽","prio":"2순위","status":"팬딩","memo":"V2, T1 Pending","req":"","note":"화주사만 인증 신청 가능","s2done":false,"v2done":false,"t1done":false,"ne":""},{"name":"Eastar Air","iata":"ZE","region":"아시아","prio":"1순위","status":"팬딩","memo":"V2, T1 Pending","req":"","note":"화물 출발시(약 7일소요) 날짜 및 출도착지 정보 확인 필요","s2done":false,"v2done":false,"t1done":false,"ne":""},{"name":"Vietnam Airlines Cargo","iata":"VN","region":"아시아","prio":"1순위","status":"거절","memo":"V2, T1 Reject","req":"","note":"베트남 항공 보안 규정상 항공인증 어려움","s2done":false,"v2done":false,"t1done":false,"ne":""},{"name":"JEJU air Cargo","iata":"7C","region":"아시아","prio":"1순위","status":"거절","memo":"V2, T1 Reject","req":"","note":"항공 인증 업무가 없음(화물 벌크로만 진행)","s2done":false,"v2done":false,"t1done":false,"ne":""},{"name":"UPS Airlines","iata":"5X","region":"북아메리카","prio":"1순위","status":"거절","memo":"V2, T1 Reject","req":"","note":"항공 인증 업무 받고 있지 않음, 화주사가 UPS측과 별도 계약 필요","s2done":false,"v2done":false,"t1done":false,"ne":""},{"name":"Ethiopian Airlines","iata":"ET","region":"아프리카","prio":"3순위","status":"팬딩","memo":"V2, T1 Pending","req":"","note":"항공 인증 업무 중단","s2done":false,"v2done":false,"t1done":false,"ne":""},{"name":"China Airlines","iata":"CI","region":"중국","prio":"3순위","status":"팬딩","memo":"T1 Pending","req":"","note":"항공 인증 업무 중단","s2done":false,"v2done":true,"t1done":false,"ne":""},{"name":"FedEx","iata":"FX","region":"북아메리카","prio":"1순위","status":"팬딩","memo":"V2, T1 Pending","req":"고객사 FedEx Account No.","note":"미국 본사를 통한 인증 신청 필요","s2done":false,"v2done":false,"t1done":false,"ne":""},{"name":"Aeroflot cargo","iata":"SU","region":"유럽","prio":"2순위","status":"팬딩","memo":"V2, T1 Pending","req":"","note":"러우 전쟁 여파로 노선 중단, 운항 재개에 맞춰 항공 인증 접수 필요","s2done":false,"v2done":false,"t1done":false,"ne":""}];
+
+// 표준 성과보수 스케줄 (KRW, 1건당)
+const STD = {
+  "1순위":{"기존":75000,"신규":125000},
+  "2순위":{"기존":57000,"신규":94000},
+  "3순위":{"기존":43000,"신규":71000}
+};
+const FX = 1550; // KRW per USD
+const TRACK = {1:{mult:0.5,base:2500000},2:{mult:1.5,base:0}};
+let curTrack = 1;
+let curCur = "KRW";
+
+// ---- helpers ----
+function neOf(a){ if(a.ne==="신규")return "신규"; return "기존"; } // default 기존
+function isReject(a){
+  if(a.status==="거절") return true;
+  const n=(a.note||"")+(a.memo||"");
+  return /화주사만|업무 중단|업무가 없음|별도 계약|Reject/.test(n);
+}
+function classify(a){
+  // returns {feas,key,diff,win}
+  if(a.status==="인증 완료") return {feas:"완료(T1·V2)",key:"done",diff:1,win:0.55};
+  if(isReject(a)) return {feas:"불가",key:"bad",diff:0,win:0};
+  if(a.status==="팬딩") return {feas:"보류(조건부)",key:"hold",diff:3,win:0.15};
+  if(a.status==="기술 검증 대응") return {feas:"실현 높음",key:"high",diff:2,win:0.8};
+  if(a.status==="신청 서류 제출(완료)") return {feas:"실현 높음",key:"high",diff:1,win:0.8};
+  if(a.status==="신청 서류 작성 및 서류 구비") return {feas:"진행 중",key:"prog",diff:2,win:0.6};
+  // 미착수
+  return neOf(a)==="신규" ? {feas:"미착수(신규)",key:"none",diff:3,win:0.25}
+                          : {feas:"미착수(기존)",key:"mid",diff:2,win:0.45};
+}
+// 획득 가능 디바이스 (회사 실제 계획에 맞춤)
+//  · T1/V2가 모두 끝난 '완료' 항공사 → 다음 단계인 S2가 획득 대상
+//  · 그 외 항공사 → 활성 프로그램인 T1·V2가 획득 대상 (S2는 후속 단계로 미집계)
+function openDevices(a){
+  const out=[];
+  if(a.t1done && a.v2done){ if(!a.s2done) out.push("S2"); return out; }
+  if(!a.t1done) out.push("T1");
+  if(!a.v2done) out.push("V2");
+  return out;
+}
+// S2가 아직 '후속(미집계)' 상태인지 — 칩 표시용
+function s2Deferred(a){ return !(a.t1done && a.v2done) && !a.s2done; }
+function perCert(a){ return STD[a.prio][neOf(a)] * TRACK[curTrack].mult; }
+function earlyBonus(a){ return perCert(a)*0.5; }
+function compute(a){
+  const c=classify(a);
+  const open=openDevices(a);
+  const feasible = c.key!=="bad";
+  const units = feasible ? open.length : 0;
+  const per = perCert(a);
+  const max = feasible ? units*per + (units>0?earlyBonus(a):0) : 0; // 조기 보너스 1건 가정(평균)
+  const ev = max * c.win;
+  return {c,open,units,per,max,ev,feasible};
+}
+function fmt(v){
+  if(curCur==="USD"){ const u=v/FX; return "$"+u.toLocaleString("en-US",{maximumFractionDigits:0}); }
+  return "₩"+Math.round(v).toLocaleString("ko-KR");
+}
+
+// ===================== RENDER =====================
+function renderSchedule(){
+  const defs={"1순위":"고객사 요청 + 지사 소재국","2순위":"유럽 소재","3순위":"그 외 지역"};
+  const tb=document.querySelector("#schedTbl tbody"); tb.innerHTML="";
+  ["1순위","2순위","3순위"].forEach(p=>{
+    const ex=STD[p]["기존"]*TRACK[curTrack].mult, nw=STD[p]["신규"]*TRACK[curTrack].mult;
+    const cls=p==="1순위"?"p1":p==="2순위"?"p2":"p3";
+    tb.insertAdjacentHTML("beforeend",
+      `<tr><td><span class="prio ${cls}">${p}</span></td><td class="l">${defs[p]}</td>
+       <td class="num">${fmt(ex)}</td><td class="num">${fmt(nw)}</td>
+       <td class="num">+${fmt(nw*0.5)} <small style="color:var(--mut)">(신규 기준)</small></td></tr>`);
+  });
+}
+function pillVal(grp){const el=document.querySelector(`[data-grp="${grp}"] .pill.on`);return el?el.dataset.v:"all";}
+function renderTable(){
+  const q=document.getElementById("search").value.trim().toLowerCase();
+  const fp=pillVal("prio"), ff=pillVal("feas"), fd=pillVal("dev");
+  let rows=AIRLINES.map(a=>({a,r:compute(a)}));
+  // filter
+  rows=rows.filter(({a,r})=>{
+    if(q){const s=(a.name+" "+a.iata+" "+a.region).toLowerCase(); if(!s.includes(q))return false;}
+    if(fp!=="all"&&a.prio!==fp)return false;
+    if(ff==="earn"&&(!r.feasible||r.units===0))return false;
+    if(ff==="high"&&r.c.key!=="high")return false;
+    if(ff==="done"&&r.c.key!=="done")return false;
+    if(ff==="bad"&&!(r.c.key==="bad"||r.c.key==="hold"))return false;
+    if(fd!=="all"&&!r.open.includes(fd))return false;
+    return true;
+  });
+  // sort
+  rows.sort((x,y)=> (sortKey==="ev"? y.r.ev-x.r.ev : sortCmp(x,y)) );
+  if(sortKey==="ev"&&sortDir<0) rows.reverse();
+  // rank
+  const tb=document.querySelector("#mainTbl tbody"); tb.innerHTML="";
+  rows.forEach(({a,r},i)=>{
+    const cls=a.prio==="1순위"?"p1":a.prio==="2순위"?"p2":"p3";
+    const fmap={done:"f-done",high:"f-high",mid:"f-mid",prog:"f-prog",none:"f-none",hold:"f-hold",bad:"f-bad"};
+    const dev=["T1","V2","S2"].map(d=>{
+      const done = (d==="T1"&&a.t1done)||(d==="V2"&&a.v2done)||(d==="S2"&&a.s2done);
+      let kls="na", tip="";
+      if(done){kls="done";}
+      else if(r.feasible && r.open.includes(d)){kls="open";}
+      else if(d==="S2" && s2Deferred(a)){kls="na";tip=' title="T1·V2 인증 후 진행되는 후속 단계 (현재 미집계)"';}
+      return `<span class="d ${kls}"${tip}>${d}</span>`;
+    }).join("");
+    const stars = r.c.diff? "★".repeat(r.c.diff)+'<span style="color:#333">'+"★".repeat(3-r.c.diff)+"</span>" : "—";
+    const note=[a.memo,a.note,a.req].filter(Boolean).join(" · ");
+    tb.insertAdjacentHTML("beforeend",
+      `<tr>
+        <td style="text-align:center;color:var(--dim);font-weight:700">${i+1}</td>
+        <td class="name">${a.name}<span class="iata">${a.iata||""}</span></td>
+        <td>${a.region||"-"}</td>
+        <td style="text-align:center"><span class="prio ${cls}">${a.prio.replace("순위","")}</span></td>
+        <td style="text-align:center"><span class="ne ${neOf(a)==="신규"?"new":""}">${neOf(a)}</span></td>
+        <td><span class="dev">${dev}</span></td>
+        <td><span class="feas ${fmap[r.c.key]}">${r.c.feas}</span></td>
+        <td style="text-align:center"><span class="stars">${stars}</span></td>
+        <td style="text-align:center;font-weight:700">${r.feasible?r.units:"—"}</td>
+        <td class="pay num">${r.feasible?fmt(r.per):"—"}</td>
+        <td class="pay num">${r.max>0?fmt(r.max):'<small>—</small>'}</td>
+        <td class="ev num">${r.ev>0?fmt(r.ev):"—"}</td>
+        <td class="memo">${note||"-"}</td>
+      </tr>`);
+  });
+  document.getElementById("tblfoot").innerHTML =
+    `표시 ${rows.length}개사 · 정렬 기준: <b>${sortLabel}</b> · 추천순위(1번 열) = 현재 정렬 순서. 기본 정렬은 ‘기대값’(성공확률 가중)으로, 곧 공략 우선순위입니다.`;
+}
+
+// ---- sorting ----
+let sortKey="ev", sortDir=-1, sortLabel="기대값";
+const labels={rank:"추천순위",name:"항공사",region:"지역",prio:"우선순위",ne:"신규/기존",feas:"실현가능성",diff:"난이도",units:"획득건수",per:"건당보수",max:"최대보수",ev:"기대값"};
+function sortCmp(x,y){
+  const a=x.a,b=y.a, ra=x.r,rb=y.r; let v=0;
+  switch(sortKey){
+    case "name":v=a.name.localeCompare(b.name);break;
+    case "region":v=(a.region||"").localeCompare(b.region||"");break;
+    case "prio":v=a.prio.localeCompare(b.prio);break;
+    case "ne":v=neOf(a).localeCompare(neOf(b));break;
+    case "feas":v=rb.c.win-ra.c.win;break;
+    case "diff":v=ra.c.diff-rb.c.diff;break;
+    case "units":v=rb.units-ra.units;break;
+    case "per":v=rb.per-ra.per;break;
+    case "max":v=rb.max-ra.max;break;
+    default:v=rb.ev-ra.ev;
+  }
+  return v*(sortDir<0?1:-1)*(sortKey==="name"||sortKey==="region"||sortKey==="prio"||sortKey==="ne"?-1:1);
+}
+function renderStats(){
+  let pool=0, earnable=0, done=0, bad=0, hi=0, certs=0;
+  AIRLINES.forEach(a=>{const r=compute(a);
+    pool+=r.max; if(r.feasible&&r.units>0){earnable++;certs+=r.units;}
+    if(r.c.key==="done")done++; if(r.c.key==="bad"||r.c.key==="hold")bad++; if(r.c.key==="high")hi++;});
+  const t=TRACK[curTrack];
+  const months=3;
+  const total = pool + t.base*months;
+  const el=document.getElementById("stats");
+  el.innerHTML=[
+    ["전체 항공사",`${AIRLINES.length}<small> 개사</small>`],
+    ["획득 가능 항공사",`${earnable}<small> 개사</small>`],
+    ["획득 가능 인증 건수",`${certs}<small> 건</small>`],
+    ["실현 높음(임박)",`<span style="color:var(--ok)">${hi}</span><small> 개사</small>`],
+    ["불가·보류",`<span style="color:var(--bad)">${bad}</span><small> 개사</small>`],
+    ["성과보수 풀(최대)",`${fmt(pool)}`],
+    [`예상 총수령 <small>(${months}개월·완주)</small>`,`${fmt(total)}`]
+  ].map(([k,v])=>`<div class="stat"><div class="k">${k}</div><div class="v num">${v}</div></div>`).join("");
+  // track cards totals
+  const poolStd = AIRLINES.reduce((s,a)=>{const o=openDevices(a),c=classify(a);
+    if(c.key==="bad")return s; const per=STD[a.prio][neOf(a)]; return s+o.length*per+(o.length?per*0.5:0);},0);
+  document.getElementById("t1total").textContent = fmt(poolStd*0.5 + 2500000*3);
+  document.getElementById("t2total").textContent = fmt(poolStd*1.5);
+  document.getElementById("t1base").textContent = fmt(2500000);
+}
+
+// ===================== CALCULATOR =====================
+function calc(){
+  const g=id=>parseFloat(document.getElementById(id).value)||0;
+  const certs=g("cCerts"), avg=g("cAvg"), early=g("cEarly")/100, months=g("cMonths"),
+        base=g("cBase"), m1=g("cM1"), m2=g("cM2");
+  const stdPay = certs*avg + certs*early*avg*0.5; // 기본 + 조기보너스(50%)
+  const t1 = base*months + stdPay*m1;
+  const t2 = stdPay*m2;
+  document.getElementById("rT1").textContent=fmt(t1);
+  document.getElementById("rT2").textContent=fmt(t2);
+  document.getElementById("rT1d").textContent=`기본급 ${fmt(base*months)} + 성과 ${fmt(stdPay*m1)}`;
+  document.getElementById("rT2d").textContent=`성과 ${fmt(stdPay*m2)} (기본급 0)`;
+  // break-even certs: base*months = stdPerCert*(m2-m1)*certs  -> solve certs
+  const payPerCert = avg + early*avg*0.5;
+  const be = (m2-m1)>0 ? Math.ceil(base*months/(payPerCert*(m2-m1))) : Infinity;
+  const v=document.getElementById("verdict");
+  if(t2>t1){
+    v.innerHTML=`✅ 이 가정에서는 <b>트랙 2(도전형)</b>가 <b>${fmt(t2-t1)}</b> 더 유리합니다. 실행력에 자신 있다면 트랙2.`;
+  }else{
+    v.innerHTML=`🛡️ 이 가정에서는 <b>트랙 1(안정형)</b>이 <b>${fmt(t1-t2)}</b> 더 유리합니다. 성과가 불확실하면 트랙1.`;
+  }
+  document.getElementById("beFoot").innerHTML =
+    `📐 <b>손익분기 인증 건수 ≈ ${isFinite(be)?be+"건":"-"}</b> (${months}개월 기준). 이보다 많이 따면 트랙2, 적으면 트랙1이 유리.`;
+}
+
+// ===================== EVENTS / BOOT =====================
+function rerenderAll(){renderSchedule();renderTable();renderStats();calc();}
+function boot(){
+  // track segment
+  document.querySelectorAll("#seg button").forEach(b=>b.addEventListener("click",()=>{
+    document.querySelectorAll("#seg button").forEach(x=>x.classList.remove("on"));
+    b.classList.add("on"); curTrack=+b.dataset.t; rerenderAll();
+  }));
+  // currency
+  document.getElementById("cur").addEventListener("click",()=>{
+    curCur=curCur==="KRW"?"USD":"KRW";
+    document.getElementById("cur").textContent= curCur==="KRW"?"통화: ₩ KRW (클릭 시 $ USD)":"통화: $ USD (클릭 시 ₩ KRW)";
+    rerenderAll();
+  });
+  // filters
+  document.querySelectorAll(".pillgrp").forEach(g=>g.querySelectorAll(".pill").forEach(p=>p.addEventListener("click",()=>{
+    g.querySelectorAll(".pill").forEach(x=>x.classList.remove("on")); p.classList.add("on"); renderTable();
+  })));
+  document.getElementById("search").addEventListener("input",renderTable);
+  // sort headers
+  document.querySelectorAll("#mainTbl th[data-s]").forEach(th=>th.addEventListener("click",()=>{
+    const k=th.dataset.s; if(k==="rank")return;
+    if(sortKey===k)sortDir=-sortDir; else {sortKey=k;sortDir=-1;}
+    sortLabel=labels[k]||k; renderTable();
+  }));
+  // calc inputs
+  ["cCerts","cAvg","cEarly","cMonths","cBase","cM1","cM2"].forEach(id=>
+    document.getElementById(id).addEventListener("input",calc));
+  rerenderAll();
+}
+</script>
+</body>
+</html>
